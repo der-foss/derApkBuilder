@@ -17,7 +17,7 @@ static int run(const char *c, size_t clen)
 {
         struct project_config pc;
         if (load_project_config(&pc, c, clen) != 0) {
-                printf("Failed to load project config.");
+                printf("Failed to load project config.\n");
                 return -1;
         }
 
@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 {
         const char *action;
         if (argc < 2) {
-                printf("Please provide an action, see \"%s help\".\n", argv[0]);
+                printf("error: please provide an action, see \"%s help\".\n", argv[0]);
                 return -1;
         }
 
@@ -53,7 +53,7 @@ int main(int argc, char **argv)
                 bool yaml = false, yml = false;
                 if (argc < 3 && !((yaml = exists("project.yaml")) ||
                                   (yml = exists("project.yml")))) {
-                        printf("You should provide a project config by cli or have it in your PWD as project.yaml.");
+                        printf("error: you should provide a project config by cli or have it in your PWD as project.yaml.");
                         return -1;
                 }
 
@@ -65,13 +65,13 @@ int main(int argc, char **argv)
                         path = argv[2];
 
                 if (!path) {
-                        printf("Somehow .yaml file is null\n");
+                        printf("error: somehow project config file path is null\n");
                         return -1;
                 }
 
                 ffd = open(path, O_RDONLY);
                 if (ffd < 0) {
-                        snprintf(buf, sizeof(buf), "Failed to open your %s",
+                        snprintf(buf, sizeof(buf), "error: failed to open your %s",
                                  path);
                         perror(buf);
                         return -1;
@@ -81,7 +81,7 @@ int main(int argc, char **argv)
                 if (flen < 0) {
                         memset(buf, 0, sizeof(buf));
                         snprintf(buf, sizeof(buf),
-                                 "Failed to get size of your %s", path);
+                                 "error: failed to get size of your %s", path);
                         perror(buf);
                         close(ffd);
                         return -1;
@@ -92,7 +92,7 @@ int main(int argc, char **argv)
                 if (!fbuf || read(ffd, fbuf, flen) < 0) {
                         memset(buf, 0, sizeof(buf));
                         snprintf(buf, sizeof(buf),
-                                 "Failed to read content of your %s", path);
+                                 "error: failed to read content of your %s", path);
                         perror(buf);
                         free(fbuf);
                         close(ffd);

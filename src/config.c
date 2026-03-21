@@ -2,6 +2,8 @@
 
 #include <malloc.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <yaml.h>
 
@@ -88,6 +90,47 @@ int load_project_config(struct project_config *pc, const char *content, size_t c
         }
 
         yaml_parser_delete(&yp);
+
+        if (!pc->name) {
+                puts("error: missing mandatory field in config: name");
+                return -1;
+        }
+
+        if (!pc->build_path) {
+                pc->build_path = strdup("./build");
+                puts("info: no build-path provided. falling back to ./build");
+        }
+
+        if (!pc->android_sdk_path) {
+                char *sdkpath = getenv("ANDROID_SDK");
+                printf("info: no android-sdk-path provided. falling back to $ANDROID_SDK or $ANDROID_HOME");
+                if (!sdkpath) sdkpath = getenv("ANDROID_HOME");
+                if (!sdkpath) {
+                        puts("error: env(ANDROID_SDK) nor env(ANDROID_HOME) are defined.");
+                        return -1;
+                }
+        }
+
+        if (pc->android_sdk_api_version == 0) {
+                puts("error: missing mandatory field in config: android-sdk-api-version");
+                return -1;
+        }
+
+        if (!pc->android_manifest_path) {
+                puts("error: missing mandatory field in config: android-manifest-path");
+                return -1;
+        }
+        
+        if (!pc->android_res_path) {
+                puts("error: missing mandatory field in config: android-res-path");
+                return -1;
+        }
+
+        if (!pc->android_java_path) {
+                puts("error: missing mandatory field in config: android-java-path");
+                return -1;
+        }
+        
         return 0;
 }
 
