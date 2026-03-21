@@ -9,8 +9,7 @@
 
 static int run(const char *path)
 {
-        struct project_t pc;
-        memset(&pc, 0, sizeof pc);
+        struct project_t pc = {0};
         if (load_project(&pc, path) != 0) {
                 printf("Failed to load project.\n");
                 return -1;

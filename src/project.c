@@ -35,15 +35,13 @@ int load_project(struct project_t *p, const char *path)
         size_t config_content_len;
         yaml_parser_t yp;
         yaml_event_t ye;
-        char ckey[100], buf[128];
+        char ckey[100] = { 0 }, buf[128] = { 0 };
         bool in_deps;
-        memset(ckey, 0, sizeof ckey);
 
-        memset(buf, 0, sizeof buf);
         snprintf(buf, sizeof buf, "%s/project.yml", path);
         if (!fexists(buf)) {
-                memset(buf, 0, sizeof buf),
-                        snprintf(buf, sizeof buf, "%s/project.yaml", path);
+                memset(buf, 0, sizeof buf);
+                snprintf(buf, sizeof buf, "%s/project.yaml", path);
         }
         if (!fexists(buf)) {
                 printf("error: no config found at %s. you must provide it in a project.yaml or project.yml.\n",
@@ -61,8 +59,8 @@ int load_project(struct project_t *p, const char *path)
 
         config_content_len = lseek(config_fd, 0, SEEK_END);
         if (config_content_len < 0) {
-                memset(buf, 0, sizeof(buf));
-                snprintf(buf, sizeof(buf),
+                memset(buf, 0, sizeof buf);
+                snprintf(buf, sizeof buf,
                          "error: failed to get size of your %s", path);
                 perror(buf);
                 close(config_fd);
@@ -73,8 +71,8 @@ int load_project(struct project_t *p, const char *path)
         config_content = malloc(config_content_len + 1);
         if (!config_content ||
             read(config_fd, config_content, config_content_len) < 0) {
-                memset(buf, 0, sizeof(buf));
-                snprintf(buf, sizeof(buf),
+                memset(buf, 0, sizeof buf);
+                snprintf(buf, sizeof buf,
                          "error: failed to read config of your %s", path);
                 perror(buf);
                 free(config_content);
@@ -171,7 +169,7 @@ int load_project(struct project_t *p, const char *path)
 
         if (!p->build_path) {
                 p->build_path = strdup("./build");
-                puts("info: no build-path provided. falling back to ./build");
+                puts("-- no build-path provided. falling back to ./build");
         }
 
         if (!p->android_sdk_path) {
@@ -182,7 +180,7 @@ int load_project(struct project_t *p, const char *path)
                         puts("error: env(ANDROID_SDK) nor env(ANDROID_HOME) are defined.");
                         return -1;
                 }
-                printf("info: no android-sdk-path provided. falling back to %s\n",
+                printf("-- no android-sdk-path provided. falling back to %s\n",
                        sdkpath);
                 p->android_sdk_path = strdup(sdkpath);
         }
@@ -218,7 +216,7 @@ int load_project(struct project_t *p, const char *path)
                         puts("error: aapt2 not found using which.");
                         return -1;
                 }
-                printf("info: no android-aapt2-bin provided. falling back to %s\n",
+                printf("-- no android-aapt2-bin provided. falling back to %s\n",
                        aapt2);
                 p->bins.aapt2 = aapt2;
         }
@@ -229,7 +227,7 @@ int load_project(struct project_t *p, const char *path)
                         puts("error: javac not found using which.");
                         return -1;
                 }
-                printf("info: no android-javac-bin provided. falling back to %s\n",
+                printf("-- no android-javac-bin provided. falling back to %s\n",
                        javac);
                 p->bins.javac = javac;
         }
@@ -240,7 +238,7 @@ int load_project(struct project_t *p, const char *path)
                         puts("error: d8 not found using which.");
                         return -1;
                 }
-                printf("info: no android-d8-bin provided. falling back to %s\n",
+                printf("-- no android-d8-bin provided. falling back to %s\n",
                        d8);
                 p->bins.d8 = d8;
         }
@@ -267,15 +265,17 @@ void destroy_project(struct project_t *p)
 
 int build_res(struct project_t *p)
 {
-        char cmd[256];
-        char buf[256];
+        char cmd[512] = {0};
+        char buf[256] = {0};
 
         makedir(p->build_path);
 
         snprintf(cmd, sizeof cmd, "%s compile --dir %s -o %s/res.zip",
                  p->bins.aapt2, p->android_res_path, p->build_path);
+
+        printf("-- Compiling resources with %s\n", p->bins.aapt2);
         if (system(cmd) != 0) {
-                puts("error: failed to run aapt2.");
+                puts("error: failed to run aapt2 compile.");
                 return -1;
         }
 
@@ -300,6 +300,11 @@ int build_res(struct project_t *p)
                  p->android_sdk_min_api_version, p->android_sdk_api_version,
                  p->android_java_path, p->build_path, p->build_path);
 
+        printf("-- Linking resources with %s\n", p->bins.aapt2);
+        if (system(cmd) != 0) {
+                puts("error: failed to run aapt2 link.");
+                return -1;
+        }
         return 0;
 }
 
