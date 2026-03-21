@@ -1,8 +1,9 @@
 #include "config.h"
+
+#include <malloc.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -10,6 +11,27 @@
 static bool exists(const char *s)
 {
         return access(s, F_OK) == 0;
+}
+
+static int run(const char *c, size_t clen)
+{
+        struct project_config pc;
+        if (load_project_config(&pc, c, clen) != 0) {
+                printf("Failed to load project config.");
+                return -1;
+        }
+
+        printf("name: %s\n", pc.name);
+        printf("build-path: %s\n", pc.build_path);
+        printf("android-sdk-path: %s\n", pc.android_sdk_path);
+        printf("android-sdk-api-version: %d\n", pc.android_sdk_api_version);
+        printf("android-manifest-path: %s\n", pc.android_manifest_path);
+        printf("android-res-path: %s\n", pc.android_res_path);
+        printf("android-java-path: %s\n", pc.android_java_path);
+
+        destroy_project_config(&pc);
+        
+        return 0;
 }
 
 int main(int argc, char **argv)
@@ -28,7 +50,6 @@ int main(int argc, char **argv)
                 size_t flen;
                 char *fbuf;
                 static char buf[128];
-                struct project_config pconfig;
                 bool yaml = false, yml = false;
                 if (argc < 3 && !((yaml = exists("project.yaml")) ||
                                   (yml = exists("project.yml")))) {
@@ -79,19 +100,12 @@ int main(int argc, char **argv)
                 }
                 fbuf[flen] = '\0';
 
-                if (load_project_config(&pconfig, fbuf) != 0) {
-                        printf("Failed to load project config.");
+                if (run(fbuf, flen - 1)) {
                         free(fbuf);
                         close(ffd);
                         return -1;
                 }
 
-                printf("name: %s\n", pconfig.name);
-                for (flen = 0; flen < pconfig.deps.count; ++flen) {
-                        printf("dep: %s\n", pconfig.deps.data[flen]);
-                }
-
-                destroy_project_config(&pconfig);
                 free(fbuf);
                 close(ffd);
         }

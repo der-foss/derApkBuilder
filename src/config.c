@@ -5,7 +5,16 @@
 #include <string.h>
 #include <yaml.h>
 
-int load_project_config(struct project_config *pc, const char *content)
+#define CONFIG_P_NAME "name"
+#define CONFIG_P_DEPENDENCIES "dependencies"
+#define CONFIG_P_BUILD_PATH "build-path"
+#define CONFIG_P_A_SDK_PATH "android-sdk-path"
+#define CONFIG_P_A_SDK_API_VERSUON "android-sdk-api-version"
+#define CONFIG_P_A_MANIFEST_PATH "android-manifest-path"
+#define CONFIG_P_A_RES_PATH "android-res-path"
+#define CONFIG_P_A_JAVA_PATH "android-java-path"
+
+int load_project_config(struct project_config *pc, const char *content, size_t content_len)
 {
         yaml_parser_t yp;
         yaml_event_t ye;
@@ -20,7 +29,7 @@ int load_project_config(struct project_config *pc, const char *content)
 
         yaml_parser_initialize(&yp);
         yaml_parser_set_input_string(&yp, (unsigned char *)content,
-                                     strlen(content));
+                                     content_len);
 
         for (;;) {
                 yaml_parser_parse(&yp, &ye);
@@ -31,27 +40,27 @@ int load_project_config(struct project_config *pc, const char *content)
                         char *value = (char *)ye.data.scalar.value;
                         if (strlen(ckey) == 0) {
                                 strcpy(ckey, value);
-                                if (strcmp(ckey, "dependencies") == 0) {
+                                if (strcmp(ckey, CONFIG_P_DEPENDENCIES) == 0) {
                                         in_deps = true;
                                 }
                         } else {
-                                if (strcmp(ckey, "name") == 0)
+                                if (strcmp(ckey, CONFIG_P_NAME) == 0)
                                         pc->name = strdup(value);
-                                else if (strcmp(ckey, "build-path") == 0)
+                                else if (strcmp(ckey, CONFIG_P_BUILD_PATH) == 0)
                                         pc->build_path = strdup(value);
-                                else if (strcmp(ckey, "android-sdk-path") == 0)
+                                else if (strcmp(ckey, CONFIG_P_A_SDK_PATH) == 0)
                                         pc->android_sdk_path = strdup(value);
                                 else if (strcmp(ckey,
-                                                "android-sdk-api-version") == 0)
+                                                CONFIG_P_A_SDK_API_VERSUON) == 0)
                                         pc->android_sdk_api_version =
                                                 atoi(value);
                                 else if (strcmp(ckey,
-                                                "android-manifest-path") == 0)
+                                                CONFIG_P_A_MANIFEST_PATH) == 0)
                                         pc->android_manifest_path =
                                                 strdup(value);
-                                else if (strcmp(ckey, "android-res-path") == 0)
+                                else if (strcmp(ckey, CONFIG_P_A_RES_PATH) == 0)
                                         pc->android_res_path = strdup(value);
-                                else if (strcmp(ckey, "android-java-path") == 0)
+                                else if (strcmp(ckey, CONFIG_P_A_JAVA_PATH) == 0)
                                         pc->android_java_path = strdup(value);
 
                                 ckey[0] = '\0';

@@ -19,7 +19,7 @@ struct project_config {
         } deps;
 };
 
-int load_project_config(struct project_config *, const char *);
+int load_project_config(struct project_config *, const char *, size_t);
 void destroy_project_config(struct project_config *);
 
 #endif
