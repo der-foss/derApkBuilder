@@ -1,8 +1,9 @@
 name: my-project
 build-path: .build
-android-sdk-path: env(ANDROID_SDK)
+#android-sdk-path: env(ANDROID_SDK)
 android-sdk-api-version: 29
-android-manifest-path: src/AndroidManifest.xml
+android-sdk-min-api-version: 24
+android-manifest-path: AndroidManifest.xml
 android-res-path: src/res
 android-java-path: src/java
 dependencies:

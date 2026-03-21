@@ -19,6 +19,15 @@ target_compile_options(derapkbuilder
   -Wextra
   -Werror)
 
+if(CMAKE_BUILD_TYPE STREQUAL Debug)
+  target_compile_options(derapkbuilder
+    PRIVATE
+    -fsanitize=address)
+  target_link_options(derapkbuilder
+    PRIVATE
+    -fsanitize=address)
+endif()
+
 target_link_libraries(derapkbuilder
   PRIVATE
   yaml)

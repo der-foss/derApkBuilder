@@ -5,33 +5,92 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <yaml.h>
+
+#include "util.h"
 
 #define PROJECT_CONFIG_NAME "name"
 #define PROJECT_CONFIG_DEPENDENCIES "dependencies"
 #define PROJECT_CONFIG_BUILD_PATH "build-path"
 #define PROJECT_CONFIG_A_SDK_PATH "android-sdk-path"
-#define PROJECT_CONFIG_A_SDK_API_VERSUON "android-sdk-api-version"
+#define PROJECT_CONFIG_A_SDK_API_VERSION "android-sdk-api-version"
+#define PROJECT_CONFIG_A_SDK_MIN_API_VERSION "android-sdk-min-api-version"
 #define PROJECT_CONFIG_A_MANIFEST_PATH "android-manifest-path"
 #define PROJECT_CONFIG_A_RES_PATH "android-res-path"
 #define PROJECT_CONFIG_A_JAVA_PATH "android-java-path"
 
-int load_project_config(struct project_config *pc, const char *content, size_t content_len)
+static char *expand(const char *x, const char *y)
 {
+        size_t zl = strlen(x) + strlen(y) + 2;
+        char *z = malloc(zl);
+        snprintf(z, zl, "%s/%s", x, y);
+        return z;
+}
+
+int load_project(struct project_t *p, const char *path)
+{
+        int config_fd;
+        char *config_content;
+        size_t config_content_len;
         yaml_parser_t yp;
         yaml_event_t ye;
-        char ckey[100];
+        char ckey[100], buf[128];
         bool in_deps;
-
         memset(ckey, 0, sizeof ckey);
 
-        pc->deps.capacity = 1;
-        pc->deps.count = 0;
-        pc->deps.data = malloc(sizeof(char *) * pc->deps.capacity);
+        memset(buf, 0, sizeof buf);
+        snprintf(buf, sizeof buf, "%s/project.yml", path);
+        if (!fexists(buf)) {
+                memset(buf, 0, sizeof buf),
+                        snprintf(buf, sizeof buf, "%s/project.yaml", path);
+        }
+        if (!fexists(buf)) {
+                printf("error: no config found at %s. you must provide it in a project.yaml or project.yml.\n",
+                       path);
+                return -1;
+        }
+
+        config_fd = open(buf, O_RDONLY);
+        if (config_fd < 0) {
+                snprintf(buf, sizeof buf, "error: failed to open your %s",
+                         path);
+                perror(buf);
+                return -1;
+        }
+
+        config_content_len = lseek(config_fd, 0, SEEK_END);
+        if (config_content_len < 0) {
+                memset(buf, 0, sizeof(buf));
+                snprintf(buf, sizeof(buf),
+                         "error: failed to get size of your %s", path);
+                perror(buf);
+                close(config_fd);
+                return -1;
+        }
+        lseek(config_fd, 0, SEEK_SET);
+
+        config_content = malloc(config_content_len + 1);
+        if (!config_content ||
+            read(config_fd, config_content, config_content_len) < 0) {
+                memset(buf, 0, sizeof(buf));
+                snprintf(buf, sizeof(buf),
+                         "error: failed to read config of your %s", path);
+                perror(buf);
+                free(config_content);
+                close(config_fd);
+                return -1;
+        }
+        config_content[config_content_len] = '\0';
+        close(config_fd);
+
+        p->deps.capacity = 1;
+        p->deps.count = 0;
+        p->deps.data = malloc(sizeof(char *) * p->deps.capacity);
 
         yaml_parser_initialize(&yp);
-        yaml_parser_set_input_string(&yp, (unsigned char *)content,
-                                     content_len);
+        yaml_parser_set_input_string(&yp, (unsigned char *)config_content,
+                                     config_content_len);
 
         for (;;) {
                 yaml_parser_parse(&yp, &ye);
@@ -42,41 +101,55 @@ int load_project_config(struct project_config *pc, const char *content, size_t c
                         char *value = (char *)ye.data.scalar.value;
                         if (strlen(ckey) == 0) {
                                 strcpy(ckey, value);
-                                if (strcmp(ckey, PROJECT_CONFIG_DEPENDENCIES) == 0) {
+                                if (strcmp(ckey, PROJECT_CONFIG_DEPENDENCIES) ==
+                                    0) {
                                         in_deps = true;
                                 }
                         } else {
                                 if (strcmp(ckey, PROJECT_CONFIG_NAME) == 0)
-                                        pc->name = strdup(value);
-                                else if (strcmp(ckey, PROJECT_CONFIG_BUILD_PATH) == 0)
-                                        pc->build_path = strdup(value);
-                                else if (strcmp(ckey, PROJECT_CONFIG_A_SDK_PATH) == 0)
-                                        pc->android_sdk_path = strdup(value);
+                                        p->name = strdup(value);
                                 else if (strcmp(ckey,
-                                                PROJECT_CONFIG_A_SDK_API_VERSUON) == 0)
-                                        pc->android_sdk_api_version =
+                                                PROJECT_CONFIG_BUILD_PATH) == 0)
+                                        p->build_path = expand(path, value);
+                                else if (strcmp(ckey,
+                                                PROJECT_CONFIG_A_SDK_PATH) == 0)
+                                        p->android_sdk_path = strdup(value);
+                                else if (strcmp(ckey,
+                                                PROJECT_CONFIG_A_SDK_API_VERSION) ==
+                                         0)
+                                        p->android_sdk_api_version =
                                                 atoi(value);
                                 else if (strcmp(ckey,
-                                                PROJECT_CONFIG_A_MANIFEST_PATH) == 0)
-                                        pc->android_manifest_path =
-                                                strdup(value);
-                                else if (strcmp(ckey, PROJECT_CONFIG_A_RES_PATH) == 0)
-                                        pc->android_res_path = strdup(value);
-                                else if (strcmp(ckey, PROJECT_CONFIG_A_JAVA_PATH) == 0)
-                                        pc->android_java_path = strdup(value);
+                                                PROJECT_CONFIG_A_SDK_MIN_API_VERSION) ==
+                                         0)
+                                        p->android_sdk_min_api_version =
+                                                atoi(value);
+                                else if (strcmp(ckey,
+                                                PROJECT_CONFIG_A_MANIFEST_PATH) ==
+                                         0)
+                                        p->android_manifest_path =
+                                                expand(path, value);
+                                else if (strcmp(ckey,
+                                                PROJECT_CONFIG_A_RES_PATH) == 0)
+                                        p->android_res_path =
+                                                expand(path, value);
+                                else if (strcmp(ckey,
+                                                PROJECT_CONFIG_A_JAVA_PATH) ==
+                                         0)
+                                        p->android_java_path =
+                                                expand(path, value);
 
                                 ckey[0] = '\0';
 
                                 if (in_deps && strlen(ckey) == 0) {
-                                        if (pc->deps.count >=
-                                            pc->deps.capacity) {
-                                                pc->deps.capacity *= 2;
-                                                pc->deps.data = realloc(
-                                                        pc->deps.data,
+                                        if (p->deps.count >= p->deps.capacity) {
+                                                p->deps.capacity *= 2;
+                                                p->deps.data = realloc(
+                                                        p->deps.data,
                                                         sizeof(char *) *
-                                                                pc->deps.capacity);
+                                                                p->deps.capacity);
                                         }
-                                        pc->deps.data[pc->deps.count++] =
+                                        p->deps.data[p->deps.count++] =
                                                 strdup(value);
                                 }
                         }
@@ -91,54 +164,153 @@ int load_project_config(struct project_config *pc, const char *content, size_t c
 
         yaml_parser_delete(&yp);
 
-        if (!pc->name) {
+        if (!p->name) {
                 puts("error: missing mandatory field in config: name");
                 return -1;
         }
 
-        if (!pc->build_path) {
-                pc->build_path = strdup("./build");
+        if (!p->build_path) {
+                p->build_path = strdup("./build");
                 puts("info: no build-path provided. falling back to ./build");
         }
 
-        if (!pc->android_sdk_path) {
+        if (!p->android_sdk_path) {
                 char *sdkpath = getenv("ANDROID_SDK");
-                printf("info: no android-sdk-path provided. falling back to $ANDROID_SDK or $ANDROID_HOME");
-                if (!sdkpath) sdkpath = getenv("ANDROID_HOME");
+                if (!sdkpath)
+                        sdkpath = getenv("ANDROID_HOME");
                 if (!sdkpath) {
                         puts("error: env(ANDROID_SDK) nor env(ANDROID_HOME) are defined.");
                         return -1;
                 }
+                printf("info: no android-sdk-path provided. falling back to %s\n",
+                       sdkpath);
+                p->android_sdk_path = strdup(sdkpath);
         }
 
-        if (pc->android_sdk_api_version == 0) {
+        if (p->android_sdk_api_version == 0) {
                 puts("error: missing mandatory field in config: android-sdk-api-version");
                 return -1;
         }
 
-        if (!pc->android_manifest_path) {
+        if (p->android_sdk_min_api_version == 0) {
+                puts("error: missing mandatory field in config: android-sdk-min-api-version");
+                return -1;
+        }
+
+        if (!p->android_manifest_path) {
                 puts("error: missing mandatory field in config: android-manifest-path");
                 return -1;
         }
-        
-        if (!pc->android_res_path) {
+
+        if (!p->android_res_path) {
                 puts("error: missing mandatory field in config: android-res-path");
                 return -1;
         }
 
-        if (!pc->android_java_path) {
+        if (!p->android_java_path) {
                 puts("error: missing mandatory field in config: android-java-path");
                 return -1;
         }
-        
+
+        if (!p->bins.aapt2) {
+                char *aapt2 = which("aapt2");
+                if (!aapt2) {
+                        puts("error: aapt2 not found using which.");
+                        return -1;
+                }
+                printf("info: no android-aapt2-bin provided. falling back to %s\n",
+                       aapt2);
+                p->bins.aapt2 = aapt2;
+        }
+
+        if (!p->bins.javac) {
+                char *javac = which("javac");
+                if (!javac) {
+                        puts("error: javac not found using which.");
+                        return -1;
+                }
+                printf("info: no android-javac-bin provided. falling back to %s\n",
+                       javac);
+                p->bins.javac = javac;
+        }
+
+        if (!p->bins.d8) {
+                char *d8 = which("d8");
+                if (!d8) {
+                        puts("error: d8 not found using which.");
+                        return -1;
+                }
+                printf("info: no android-d8-bin provided. falling back to %s\n",
+                       d8);
+                p->bins.d8 = d8;
+        }
         return 0;
 }
 
-void destroy_project_config(struct project_config *pc)
+void destroy_project(struct project_t *p)
 {
-        size_t i = 0;
-        for (; i < pc->deps.count; ++i) {
-                free(pc->deps.data[i]);
+        size_t i;
+        free(p->name);
+        free(p->build_path);
+        free(p->android_sdk_path);
+        free(p->android_manifest_path);
+        free(p->android_res_path);
+        free(p->android_java_path);
+        free(p->bins.javac);
+        free(p->bins.aapt2);
+        free(p->bins.d8);
+        for (i = 0; i < p->deps.count; ++i) {
+                free(p->deps.data[i]);
         }
-        free(pc->deps.data);
+        free(p->deps.data);
+}
+
+int build_res(struct project_t *p)
+{
+        char cmd[256];
+        char buf[256];
+
+        makedir(p->build_path);
+
+        snprintf(cmd, sizeof cmd, "%s compile --dir %s -o %s/res.zip",
+                 p->bins.aapt2, p->android_res_path, p->build_path);
+        if (system(cmd) != 0) {
+                puts("error: failed to run aapt2.");
+                return -1;
+        }
+
+        snprintf(buf, sizeof buf, "%s/platforms/android-%d/android.jar",
+                 p->android_sdk_path, p->android_sdk_api_version);
+        if (!fexists(buf)) {
+                printf("error: android.jar doesn't exists at %s\n", buf);
+                return -1;
+        }
+
+        memset(cmd, 0, sizeof cmd);
+        snprintf(cmd, sizeof cmd,
+                 "%s link --auto-add-overlay "
+                 "--manifest %s "
+                 "-I %s "
+                 "--min-sdk-version %d "
+                 "--target-sdk-version %d "
+                 "--java %s "
+                 "-R %s/res.zip "
+                 "-o %s/unaligned.apk",
+                 p->bins.aapt2, p->android_manifest_path, buf,
+                 p->android_sdk_min_api_version, p->android_sdk_api_version,
+                 p->android_java_path, p->build_path, p->build_path);
+
+        return 0;
+}
+
+int build_java(struct project_t *p)
+{
+        (void)p;
+        return 0;
+}
+
+int build_dex(struct project_t *p)
+{
+        (void)p;
+        return 0;
 }

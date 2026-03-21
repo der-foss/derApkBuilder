@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-struct project_config {
+struct project_t {
         char *name;
         char *build_path;
         char *android_sdk_path;
@@ -11,15 +11,26 @@ struct project_config {
         char *android_res_path;
         char *android_java_path;
         int android_sdk_api_version;
+        int android_sdk_min_api_version;
 
         struct {
-               char **data;
-               size_t count;
-               size_t capacity; 
+                char **data;
+                size_t count;
+                size_t capacity;
         } deps;
+
+        struct {
+                char *aapt2;
+                char *javac;
+                char *d8;
+        } bins;
 };
 
-int load_project_config(struct project_config *, const char *, size_t);
-void destroy_project_config(struct project_config *);
+int load_project(struct project_t *, const char *);
+void destroy_project(struct project_t *);
+
+int build_res(struct project_t *);
+int build_java(struct project_t *);
+int build_dex(struct project_t *);
 
 #endif
