@@ -1,5 +1,5 @@
-#ifndef ab_config
-#define ab_config
+#ifndef dab_project
+#define dab_project
 
 #include <stddef.h>
 

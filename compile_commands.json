@@ -7,8 +7,8 @@
 },
 {
   "directory": "/data/data/com.termux/files/home/projs/kilate-foss/derapkbuilder/.build",
-  "command": "/data/data/com.termux/files/usr/bin/cc  -I/data/data/com.termux/files/home/projs/kilate-foss/derapkbuilder/include -O2 -g -DNDEBUG -std=gnu90 -pedantic -pedantic-errors -Wall -Wextra -Werror -o CMakeFiles/derapkbuilder.dir/src/config.c.o -c /data/data/com.termux/files/home/projs/kilate-foss/derapkbuilder/src/config.c",
-  "file": "/data/data/com.termux/files/home/projs/kilate-foss/derapkbuilder/src/config.c",
-  "output": "CMakeFiles/derapkbuilder.dir/src/config.c.o"
+  "command": "/data/data/com.termux/files/usr/bin/cc  -I/data/data/com.termux/files/home/projs/kilate-foss/derapkbuilder/include -O2 -g -DNDEBUG -std=gnu90 -pedantic -pedantic-errors -Wall -Wextra -Werror -o CMakeFiles/derapkbuilder.dir/src/project.c.o -c /data/data/com.termux/files/home/projs/kilate-foss/derapkbuilder/src/project.c",
+  "file": "/data/data/com.termux/files/home/projs/kilate-foss/derapkbuilder/src/project.c",
+  "output": "CMakeFiles/derapkbuilder.dir/src/project.c.o"
 }
 ]
