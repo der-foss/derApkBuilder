@@ -1,0 +1,11 @@
+name: my-project
+build-path: .build
+sdk-path: env(ANDROID_SDK(
+sdk-api-version: 29
+android-manifest-path: src/AndroidManifest.xml
+android-res-path: src/res
+android-java-path: src/java
+dependencies:
+  - androidx.constraintlayout:constraintlayout:2.2.0
+  - md3.hehe:mrje:2.2.0
+  - java.ejhej:mrje:8.0.2

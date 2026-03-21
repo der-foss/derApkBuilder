@@ -1,0 +1,14 @@
+[
+{
+  "directory": "/data/data/com.termux/files/home/projs/c/derapkbuilder/.build",
+  "command": "/data/data/com.termux/files/usr/bin/cc  -I/data/data/com.termux/files/home/projs/c/derapkbuilder/include -O2 -g -DNDEBUG -std=gnu90 -pedantic -pedantic-errors -Wall -Wextra -Werror -o CMakeFiles/derapkbuilder.dir/src/main.c.o -c /data/data/com.termux/files/home/projs/c/derapkbuilder/src/main.c",
+  "file": "/data/data/com.termux/files/home/projs/c/derapkbuilder/src/main.c",
+  "output": "CMakeFiles/derapkbuilder.dir/src/main.c.o"
+},
+{
+  "directory": "/data/data/com.termux/files/home/projs/c/derapkbuilder/.build",
+  "command": "/data/data/com.termux/files/usr/bin/cc  -I/data/data/com.termux/files/home/projs/c/derapkbuilder/include -O2 -g -DNDEBUG -std=gnu90 -pedantic -pedantic-errors -Wall -Wextra -Werror -o CMakeFiles/derapkbuilder.dir/src/config.c.o -c /data/data/com.termux/files/home/projs/c/derapkbuilder/src/config.c",
+  "file": "/data/data/com.termux/files/home/projs/c/derapkbuilder/src/config.c",
+  "output": "CMakeFiles/derapkbuilder.dir/src/config.c.o"
+}
+]
