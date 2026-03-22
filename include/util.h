@@ -2,19 +2,60 @@
 #define dab_util
 
 #include <stdbool.h>
-#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
 
-struct file_list_t {
-        char **data;
-        size_t count;
-        size_t capacity;
-};
+#ifdef _WIN32
+#include <direct.h>
+#ifndef strdup
+#define strdup _strdup
+#endif
+#ifndef pmkdir
+#define pmkdir(s) _mkdir(s)
+#endif
+#else
+#include <unistd.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#ifndef pmkdir
+#define pmkdir(s) mkdir(s, 0700)
+#endif
+#endif
 
-bool fexists(const char *);
-char *which(const char *);
-bool makedir(const char *);
+static __attribute__((unused))
+bool fexists(const char *s)
+{
+        return access(s, F_OK) == 0;
+}
 
-int list_java_files(struct file_list_t *, const char *);
-void clean_file_list(struct file_list_t *);
+static __attribute__((unused))
+char *which(const char *cmd)
+{
+        FILE *f;
+        char buf[256];
+        snprintf(buf, sizeof buf, "which %s", cmd);
+
+        f = popen(buf, "r");
+        if (!f) {
+                return NULL;
+        }
+
+        memset(buf, 0, sizeof buf);
+        if (fgets(buf, sizeof buf, f) != NULL) {
+                char *p =strdup(buf);
+                p[strcspn(p, "\n")] = 0;
+                return p;
+        }
+        return NULL;
+}
+
+static __attribute__((unused))
+bool makedir(const char *s) {
+        if (!fexists(s)) {
+                pmkdir(s);
+                return true;
+        }
+        return false;
+}
 
 #endif

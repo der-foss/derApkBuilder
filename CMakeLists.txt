@@ -7,8 +7,7 @@ set(CMAKE_C_STANDARD 90)
 
 set(SOURCES
   src/main.c
-  src/project.c
-  src/util.c)
+  src/project.c)
 
 add_executable(derapkbuilder ${SOURCES})
 
