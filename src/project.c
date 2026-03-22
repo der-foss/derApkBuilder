@@ -13,21 +13,33 @@
 #include "util.h"
 
 #define PROJECT_CONFIG_NAME "name"
-#define PROJECT_CONFIG_DEPENDENCIES "dependencies"
 #define PROJECT_CONFIG_BUILD_PATH "build-path"
+#define PROJECT_CONFIG_DEPENDENCIES "dependencies"
+#define PROJECT_CONFIG_BINS "bins"
+#define PROJECT_CONFIG_ANDROID "android"
 
-#define PROJECT_CONFIG_A_SDK_PATH "android-sdk-path"
-#define PROJECT_CONFIG_A_SDK_API_VERSION "android-sdk-api-version"
-#define PROJECT_CONFIG_A_SDK_MIN_API_VERSION "android-sdk-min-api-version"
+#define PROJECT_CONFIG_A_SDK_PATH "sdk-path"
+#define PROJECT_CONFIG_A_SDK_API_VERSION "sdk-api-version"
+#define PROJECT_CONFIG_A_SDK_MIN_API_VERSION "sdk-min-api-version"
 
-#define PROJECT_CONFIG_A_MANIFEST_PATH "android-manifest-path"
-#define PROJECT_CONFIG_A_RES_PATH "android-res-path"
-#define PROJECT_CONFIG_A_JAVA_PATH "android-java-path"
+#define PROJECT_CONFIG_A_MANIFEST_PATH "manifest-path"
+#define PROJECT_CONFIG_A_RES_PATH "res-path"
+#define PROJECT_CONFIG_A_JAVA_PATH "java-path"
 
-#define PROJECT_CONFIG_A_KEYSTORE_PATH "android-keystore-path"
-#define PROJECT_CONFIG_A_KEYSTORE_ALIAS "android-keystore-alias"
-#define PROJECT_CONFIG_A_KEYSTORE_STORE_PASS "android-keystore-store-pass"
-#define PROJECT_CONFIG_A_KEYSTORE_KEY_PASS "android-keystore-key-pass"
+#define PROJECT_CONFIG_A_KEYSTORE_PATH "keystore-path"
+#define PROJECT_CONFIG_A_KEYSTORE_ALIAS "keystore-alias"
+#define PROJECT_CONFIG_A_KEYSTORE_STORE_PASS "keystore-store-pass"
+#define PROJECT_CONFIG_A_KEYSTORE_KEY_PASS "keystore-key-pass"
+
+#define PROJECT_CONFIG_B_AAPT2 "aapt2"
+#define PROJECT_CONFIG_B_D8 "d8"
+#define PROJECT_CONFIG_B_JAVAC "javac"
+#define PROJECT_CONFIG_B_JAR "jar"
+#define PROJECT_CONFIG_B_JARSIGNER "jarsigner"
+#define PROJECT_CONFIG_B_ZIP "zip"
+#define PROJECT_CONFIG_B_ZIPALIGN "zipalign"
+
+enum config_ctx_t { CTX_ROOT, CTX_ANDROID, CTX_BINS, CTX_DEPS };
 
 static char *expand(const char *x, const char *y)
 {
@@ -42,10 +54,11 @@ int load_project(struct project_t *p, const char *path)
         int config_fd;
         char *config_content;
         size_t config_content_len;
+        enum config_ctx_t config_ctx = CTX_ROOT;
+        bool expecting_key = true;
         yaml_parser_t yp;
         yaml_event_t ye;
         char ckey[100] = { 0 }, buf[128] = { 0 };
-        bool in_deps;
 
         snprintf(buf, sizeof buf, "%s/project.yml", path);
         if (!fexists(buf)) {
@@ -102,88 +115,145 @@ int load_project(struct project_t *p, const char *path)
         for (;;) {
                 yaml_parser_parse(&yp, &ye);
 
-                if (ye.type == YAML_STREAM_END_EVENT)
-                        break;
-                if (ye.type == YAML_SCALAR_EVENT) {
-                        char *value = (char *)ye.data.scalar.value;
-                        if (strlen(ckey) == 0) {
-                                strcpy(ckey, value);
-                                if (strcmp(ckey, PROJECT_CONFIG_DEPENDENCIES) ==
-                                    0) {
-                                        in_deps = true;
-                                }
-                        } else {
-                                if (strcmp(ckey, PROJECT_CONFIG_NAME) == 0)
-                                        p->name = strdup(value);
-                                else if (strcmp(ckey,
-                                                PROJECT_CONFIG_BUILD_PATH) == 0)
-                                        p->build_path = expand(path, value);
-                                else if (strcmp(ckey,
-                                                PROJECT_CONFIG_A_SDK_PATH) == 0)
-                                        p->android.sdk_path = strdup(value);
-                                else if (strcmp(ckey,
-                                                PROJECT_CONFIG_A_SDK_API_VERSION) ==
-                                         0)
-                                        p->android.sdk_api_version =
-                                                atoi(value);
-                                else if (strcmp(ckey,
-                                                PROJECT_CONFIG_A_SDK_MIN_API_VERSION) ==
-                                         0)
-                                        p->android.sdk_min_api_version =
-                                                atoi(value);
-                                else if (strcmp(ckey,
-                                                PROJECT_CONFIG_A_MANIFEST_PATH) ==
-                                         0)
-                                        p->android.manifest_path =
-                                                expand(path, value);
-                                else if (strcmp(ckey,
-                                                PROJECT_CONFIG_A_RES_PATH) == 0)
-                                        p->android.res_path =
-                                                expand(path, value);
-                                else if (strcmp(ckey,
-                                                PROJECT_CONFIG_A_JAVA_PATH) ==
-                                         0)
-                                        p->android.java_path =
-                                                expand(path, value);
-                                else if (strcmp(ckey,
-                                                PROJECT_CONFIG_A_KEYSTORE_PATH) == 0)
-                                        p->android.keystore_path = expand(path, value);
-                                else if (strcmp(ckey,
-                                                PROJECT_CONFIG_A_KEYSTORE_ALIAS) ==
-                                         0)
-                                        p->android.keystore_alias =
-                                                strdup(value);
-                                else if (strcmp(ckey,
-                                                PROJECT_CONFIG_A_KEYSTORE_STORE_PASS) ==
-                                         0)
-                                        p->android.keystore_store_pass =
-                                                strdup(value);
-                                else if (strcmp(ckey,
-                                                PROJECT_CONFIG_A_KEYSTORE_KEY_PASS) ==
-                                         0)
-                                        p->android.keystore_key_pass =
-                                                strdup(value);
-
+                if (ye.type == YAML_MAPPING_START_EVENT) {
+                        if (strcmp(ckey, PROJECT_CONFIG_ANDROID) == 0) {
+                                config_ctx = CTX_ANDROID;
                                 ckey[0] = '\0';
-
-                                if (in_deps && strlen(ckey) == 0) {
-                                        if (p->deps.count >= p->deps.capacity) {
-                                                p->deps.capacity *= 2;
-                                                p->deps.data = realloc(
-                                                        p->deps.data,
-                                                        sizeof(char *) *
-                                                                p->deps.capacity);
-                                        }
-                                        p->deps.data[p->deps.count++] =
-                                                strdup(value);
-                                }
+                        } else if (strcmp(ckey, PROJECT_CONFIG_BINS) == 0) {
+                                config_ctx = CTX_BINS;
+                                ckey[0] = '\0';
                         }
+                        expecting_key = true;
+                }
+
+                if (ye.type == YAML_SEQUENCE_START_EVENT) {
+                        if (strcmp(ckey, PROJECT_CONFIG_DEPENDENCIES) == 0) {
+                                config_ctx = CTX_DEPS;
+                                ckey[0] = '\0';
+                        }
+                        expecting_key = false;
                 }
 
                 if (ye.type == YAML_SEQUENCE_END_EVENT) {
-                        in_deps = false;
+                        config_ctx = CTX_ROOT;
+                        expecting_key = true;
                 }
 
+                if (ye.type == YAML_STREAM_END_EVENT) {
+                        break;
+                }
+
+                if (ye.type == YAML_SCALAR_EVENT) {
+                        char *value = (char *)ye.data.scalar.value;
+                        if (config_ctx == CTX_DEPS) {
+                                if (p->deps.count >= p->deps.capacity) {
+                                        p->deps.capacity *= 2;
+                                        p->deps.data = realloc(
+                                                p->deps.data,
+                                                sizeof(char *) *
+                                                        p->deps.capacity);
+                                }
+                                p->deps.data[p->deps.count++] = strdup(value);
+                                continue;
+                        }
+                        if (expecting_key) {
+                                strcpy(ckey, value);
+                                expecting_key = false;
+                        } else {
+                                expecting_key = true;
+                                if (config_ctx == CTX_ROOT) {
+                                        if (strcmp(ckey, PROJECT_CONFIG_NAME) ==
+                                            0)
+                                                p->name = strdup(value);
+                                        else if (strcmp(ckey,
+                                                        PROJECT_CONFIG_BUILD_PATH) ==
+                                                 0)
+                                                p->build_path =
+                                                        expand(path, value);
+                                } else if (config_ctx == CTX_ANDROID) {
+                                        if (strcmp(ckey,
+                                                   PROJECT_CONFIG_A_SDK_PATH) ==
+                                            0)
+                                                p->android.sdk_path =
+                                                        strdup(value);
+                                        else if (strcmp(ckey,
+                                                        PROJECT_CONFIG_A_SDK_API_VERSION) ==
+                                                 0)
+                                                p->android.sdk_api_version =
+                                                        atoi(value);
+                                        else if (strcmp(ckey,
+                                                        PROJECT_CONFIG_A_SDK_MIN_API_VERSION) ==
+                                                 0)
+                                                p->android.sdk_min_api_version =
+                                                        atoi(value);
+                                        else if (strcmp(ckey,
+                                                        PROJECT_CONFIG_A_MANIFEST_PATH) ==
+                                                 0)
+                                                p->android.manifest_path =
+                                                        expand(path, value);
+                                        else if (strcmp(ckey,
+                                                        PROJECT_CONFIG_A_RES_PATH) ==
+                                                 0)
+                                                p->android.res_path =
+                                                        expand(path, value);
+                                        else if (strcmp(ckey,
+                                                        PROJECT_CONFIG_A_JAVA_PATH) ==
+                                                 0)
+                                                p->android.java_path =
+                                                        expand(path, value);
+                                        else if (strcmp(ckey,
+                                                        PROJECT_CONFIG_A_KEYSTORE_PATH) ==
+                                                 0)
+                                                p->android.keystore_path =
+                                                        expand(path, value);
+                                        else if (strcmp(ckey,
+                                                        PROJECT_CONFIG_A_KEYSTORE_ALIAS) ==
+                                                 0)
+                                                p->android.keystore_alias =
+                                                        strdup(value);
+                                        else if (strcmp(ckey,
+                                                        PROJECT_CONFIG_A_KEYSTORE_STORE_PASS) ==
+                                                 0)
+                                                p->android.keystore_store_pass =
+                                                        strdup(value);
+                                        else if (strcmp(ckey,
+                                                        PROJECT_CONFIG_A_KEYSTORE_KEY_PASS) ==
+                                                 0)
+                                                p->android.keystore_key_pass =
+                                                        strdup(value);
+                                } else if (config_ctx == CTX_BINS) {
+                                        if (strcmp(ckey,
+                                                   PROJECT_CONFIG_B_AAPT2) == 0)
+                                                p->bins.aapt2 = strdup(value);
+                                        else if (strcmp(ckey,
+                                                        PROJECT_CONFIG_B_D8) ==
+                                                 0)
+                                                p->bins.d8 = strdup(value);
+                                        else if (strcmp(ckey,
+                                                        PROJECT_CONFIG_B_JAVAC) ==
+                                                 0)
+                                                p->bins.javac = strdup(value);
+                                        else if (strcmp(ckey,
+                                                        PROJECT_CONFIG_B_JAR) ==
+                                                 0)
+                                                p->bins.jar = strdup(value);
+                                        else if (strcmp(ckey,
+                                                        PROJECT_CONFIG_B_JARSIGNER) ==
+                                                 0)
+                                                p->bins.jarsigner =
+                                                        strdup(value);
+                                        else if (strcmp(ckey,
+                                                        PROJECT_CONFIG_B_ZIP) ==
+                                                 0)
+                                                p->bins.zip = strdup(value);
+                                        else if (strcmp(ckey,
+                                                        PROJECT_CONFIG_B_ZIPALIGN) ==
+                                                 0)
+                                                p->bins.zipalign =
+                                                        strdup(value);
+                                }
+                        }
+                }
                 yaml_event_delete(&ye);
         }
 
@@ -208,33 +278,33 @@ int load_project(struct project_t *p, const char *path)
                         puts("error: env(ANDROID_SDK) nor env(ANDROID_HOME) are defined.");
                         return -1;
                 }
-                printf("-- no android-sdk-path provided. falling back to %s\n",
+                printf("-- no android:sdk-path provided. falling back to %s\n",
                        sdkpath);
                 p->android.sdk_path = strdup(sdkpath);
         }
 
         if (p->android.sdk_api_version == 0) {
-                puts("error: missing mandatory field in config: android-sdk-api-version");
+                puts("error: missing mandatory field in config: android:sdk-api-version");
                 return -1;
         }
 
         if (p->android.sdk_min_api_version == 0) {
-                puts("error: missing mandatory field in config: android-sdk-min-api-version");
+                puts("error: missing mandatory field in config: android:sdk-min-api-version");
                 return -1;
         }
 
         if (!p->android.manifest_path) {
-                puts("error: missing mandatory field in config: android-manifest-path");
+                puts("error: missing mandatory field in config: android:manifest-path");
                 return -1;
         }
 
         if (!p->android.res_path) {
-                puts("error: missing mandatory field in config: android-res-path");
+                puts("error: missing mandatory field in config: android:res-path");
                 return -1;
         }
 
         if (!p->android.java_path) {
-                puts("error: missing mandatory field in config: android-java-path");
+                puts("error: missing mandatory field in config: android:java-path");
                 return -1;
         }
 
@@ -244,20 +314,9 @@ int load_project(struct project_t *p, const char *path)
                         puts("error: aapt2 not found using which.");
                         return -1;
                 }
-                printf("-- no android-aapt2-bin provided. falling back to %s\n",
+                printf("-- no bins:aapt2 provided. falling back to %s\n",
                        aapt2);
                 p->bins.aapt2 = aapt2;
-        }
-
-        if (!p->bins.javac) {
-                char *javac = which("javac");
-                if (!javac) {
-                        puts("error: javac not found using which.");
-                        return -1;
-                }
-                printf("-- no android-javac-bin provided. falling back to %s\n",
-                       javac);
-                p->bins.javac = javac;
         }
 
         if (!p->bins.d8) {
@@ -266,9 +325,19 @@ int load_project(struct project_t *p, const char *path)
                         puts("error: d8 not found using which.");
                         return -1;
                 }
-                printf("-- no android-d8-bin provided. falling back to %s\n",
-                       d8);
+                printf("-- no bins:d8 provided. falling back to %s\n", d8);
                 p->bins.d8 = d8;
+        }
+
+        if (!p->bins.javac) {
+                char *javac = which("javac");
+                if (!javac) {
+                        puts("error: javac not found using which.");
+                        return -1;
+                }
+                printf("-- no bins:javac provided. falling back to %s\n",
+                       javac);
+                p->bins.javac = javac;
         }
 
         if (!p->bins.jar) {
@@ -277,9 +346,19 @@ int load_project(struct project_t *p, const char *path)
                         puts("error: jar not found using which.");
                         return -1;
                 }
-                printf("-- no android-jar-bin provided. falling back to %s\n",
-                       jar);
+                printf("-- no bins:jar provided. falling back to %s\n", jar);
                 p->bins.jar = jar;
+        }
+
+        if (!p->bins.jarsigner) {
+                char *jarsigner = which("jarsigner");
+                if (!jarsigner) {
+                        puts("error: jarsigner not found using which.");
+                        return -1;
+                }
+                printf("-- no bins:jarsigner provided. falling back to %s\n",
+                       jarsigner);
+                p->bins.jarsigner = jarsigner;
         }
 
         if (!p->bins.zip) {
@@ -288,8 +367,7 @@ int load_project(struct project_t *p, const char *path)
                         puts("error: zip not found using which.");
                         return -1;
                 }
-                printf("-- no android-zip-bin provided. falling back to %s\n",
-                       zip);
+                printf("-- no bins:zip provided. falling back to %s\n", zip);
                 p->bins.zip = zip;
         }
 
@@ -299,20 +377,9 @@ int load_project(struct project_t *p, const char *path)
                         puts("error: zipalign not found using which.");
                         return -1;
                 }
-                printf("-- no android-zipalign-bin provided. falling back to %s\n",
+                printf("-- no bins:zipalign provided. falling back to %s\n",
                        zipalign);
                 p->bins.zipalign = zipalign;
-        }
-
-        if (!p->bins.jarsigner) {
-                char *jarsigner = which("jarsigner");
-                if (!jarsigner) {
-                        puts("error: jarsigner not found using which.");
-                        return -1;
-                }
-                printf("-- no android-jarsigner-bin provided. falling back to %s\n",
-                       jarsigner);
-                p->bins.jarsigner = jarsigner;
         }
         return 0;
 }
@@ -526,9 +593,10 @@ int build_dex(struct project_t *p)
 
         mkdirs(p);
 
-        snprintf(cmd, sizeof cmd,
-                 "d8 --min-api %d --output %s/generated %s/generated/java/classes.jar",
-                 p->android.sdk_min_api_version, p->build_path, p->build_path);
+        snprintf(
+                cmd, sizeof cmd,
+                "d8 --min-api %d --output %s/generated %s/generated/java/classes.jar",
+                p->android.sdk_min_api_version, p->build_path, p->build_path);
         printf("-- Dexing %s/generated/java/classes.jar with %s\n",
                p->build_path, p->bins.d8);
         if (system(cmd) != 0) {
@@ -542,9 +610,12 @@ int make_apk(struct project_t *p)
 {
         char cmd[512] = { 0 };
 
-        snprintf(cmd, sizeof cmd, "%s -j -ur %s/unaligned.apk %s/generated/classes.dex > /dev/null",
-                 p->bins.zip, p->build_path, p->build_path);
-        printf("-- Adding %s/generated/classes.dex into %s/unaligned.apk with %s\n", p->build_path, p->build_path, p->bins.zip);
+        snprintf(
+                cmd, sizeof cmd,
+                "%s -j -ur %s/unaligned.apk %s/generated/classes.dex > /dev/null",
+                p->bins.zip, p->build_path, p->build_path);
+        printf("-- Adding %s/generated/classes.dex into %s/unaligned.apk with %s\n",
+               p->build_path, p->build_path, p->bins.zip);
         if (system(cmd) != 0) {
                 puts("error: failed to add classes.dex into unaligned.apk with zip.");
                 return -1;
@@ -559,17 +630,21 @@ int make_apk(struct project_t *p)
                  "%s/unaligned.apk "
                  "%s > /dev/null",
                  p->android.keystore_path, p->android.keystore_store_pass,
-                 p->android.keystore_key_pass, p->build_path,
-                 p->build_path, p->android.keystore_alias);
+                 p->android.keystore_key_pass, p->build_path, p->build_path,
+                 p->android.keystore_alias);
 
-        printf("-- Signing %s/unaligned.apk with %s\n", p->build_path, p->bins.jarsigner);
+        printf("-- Signing %s/unaligned.apk with %s\n", p->build_path,
+               p->bins.jarsigner);
         if (system(cmd) != 0) {
                 puts("error: failed to sign apk with jarsigner.");
                 return -1;
         }
 
-        snprintf(cmd, sizeof cmd, "zipalign -f 4 %s/signed-unaligned.apk %s/signed.apk", p->build_path, p->build_path);
-        printf("-- Aligning %s/unaligned.apk with %s\n", p->build_path, p->bins.zipalign);
+        snprintf(cmd, sizeof cmd,
+                 "zipalign -f 4 %s/signed-unaligned.apk %s/signed.apk",
+                 p->build_path, p->build_path);
+        printf("-- Aligning %s/unaligned.apk with %s\n", p->build_path,
+               p->bins.zipalign);
         if (system(cmd) != 0) {
                 puts("error: failed to align apk with zipalign.");
                 return -1;
