@@ -1,9 +1,11 @@
 #include "project.h"
 
+#include <dirent.h>
 #include <malloc.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 #include <unistd.h>
 #include <yaml.h>
@@ -161,6 +163,7 @@ int load_project(struct project_t *p, const char *path)
         }
 
         yaml_parser_delete(&yp);
+        free(config_content);
 
         if (!p->name) {
                 puts("error: missing mandatory field in config: name");
@@ -265,8 +268,8 @@ void destroy_project(struct project_t *p)
 
 int build_res(struct project_t *p)
 {
-        char cmd[512] = {0};
-        char buf[256] = {0};
+        char cmd[512] = { 0 };
+        char buf[256] = { 0 };
 
         makedir(p->build_path);
 
@@ -293,12 +296,12 @@ int build_res(struct project_t *p)
                  "-I %s "
                  "--min-sdk-version %d "
                  "--target-sdk-version %d "
-                 "--java %s "
+                 "--java %s/java/generated/ "
                  "-R %s/res.zip "
                  "-o %s/unaligned.apk",
                  p->bins.aapt2, p->android_manifest_path, buf,
                  p->android_sdk_min_api_version, p->android_sdk_api_version,
-                 p->android_java_path, p->build_path, p->build_path);
+                 p->build_path, p->build_path, p->build_path);
 
         printf("-- Linking resources with %s\n", p->bins.aapt2);
         if (system(cmd) != 0) {
@@ -308,9 +311,127 @@ int build_res(struct project_t *p)
         return 0;
 }
 
+struct java_files_t {
+        size_t capacity;
+        size_t len;
+        char *files;
+};
+
+int get_java_files(struct java_files_t *jf, const char *d)
+{
+        struct DIR *dir = opendir(d);
+        struct dirent *entry = NULL;
+
+        if (!dir) {
+                perror("error: can't open dir");
+                return -1;
+        }
+
+        if (jf->capacity == 0)
+                jf->capacity = 32;
+        if (!jf->files) {
+                jf->files = malloc(jf->capacity);
+                if (!jf->files) {
+                        perror("error: can't allocate memory for java_files");
+                        return -1;
+                }
+                jf->files[0] = '\0';
+                jf->len = 0;
+        }
+
+        while ((entry = readdir(dir)) != NULL) {
+                char fph[512];
+                if (strcmp(entry->d_name, ".") == 0 ||
+                    strcmp(entry->d_name, "..") == 0)
+                        continue;
+
+                snprintf(fph, sizeof fph, "%s/%s", d, entry->d_name);
+
+                if (entry->d_type == DT_REG) {
+                        size_t n = jf->len + strlen(fph) + 2;
+                        size_t len = strlen(fph);
+                        if (n > jf->capacity) {
+                                char *r;
+                                jf->capacity = n * 2;
+                                r = realloc(jf->files, jf->capacity);
+                                if (!r) {
+                                        perror("error: can't reallocate memory for java_files");
+                                        free(jf->files);
+                                        return -1;
+                                }
+                                jf->files = r;
+                        }
+
+                        memcpy(jf->files + jf->len, fph, len);
+                        jf->len += len;
+                        jf->files[jf->len++] = ' ';
+                        jf->files[jf->len++] = '\0';
+                } else if (entry->d_type == DT_DIR) {
+                        get_java_files(jf, fph);
+                }
+        }
+        closedir(dir);
+        return 0;
+}
+
 int build_java(struct project_t *p)
 {
-        (void)p;
+        char outdir[512] = { 0 };
+        char buf[512] = { 0 };
+        char androidjar[512] = { 0 };
+        char *cmd = NULL;
+        size_t len = 0;
+        struct java_files_t javafiles = { 0 };
+
+        makedir(p->build_path);
+
+        snprintf(outdir, sizeof outdir, "%s/java/classes/", p->build_path);
+        makedir(outdir);
+
+        snprintf(androidjar, sizeof androidjar,
+                 "%s/platforms/android-%d/android.jar", p->android_sdk_path,
+                 p->android_sdk_api_version);
+        if (!fexists(androidjar)) {
+                printf("error: android.jar doesn't exists at %s\n", buf);
+                return -1;
+        }
+
+        snprintf(buf, sizeof buf,
+                 "%s -source 17 "
+                 "-target 17 "
+                 "-nowarn "
+                 "-proc:none "
+                 "-classpath %s "
+                 "-d %s ",
+                 p->bins.javac, androidjar, outdir);
+
+        len = strlen(buf);
+
+        if (get_java_files(&javafiles, p->android_java_path) != 0) {
+                printf("error: can't get java files at %s\n",
+                       p->android_java_path);
+                return -1;
+        }
+
+        len += javafiles.capacity;
+        cmd = malloc(sizeof(char) * len);
+        if (!cmd) {
+                perror("error: failed to allocate javac cmd");
+                free(javafiles.files);
+                return -1;
+        }
+
+        strcpy(cmd, buf);
+        strcat(cmd, javafiles.files);
+
+        printf("-- Compiling java files with %s\n", p->bins.javac);
+        if (system(cmd) != 0) {
+                puts("error: failed to run javac compile.");
+                free(javafiles.files);
+                return -1;
+        }
+        free(javafiles.files);
+        free(cmd);
         return 0;
 }
 

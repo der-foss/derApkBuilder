@@ -1,14 +1,14 @@
 [
 {
-  "directory": "/data/data/com.termux/files/home/projs/kilate-foss/derapkbuilder/.build",
-  "command": "/data/data/com.termux/files/usr/bin/cc -I/data/data/com.termux/files/home/projs/kilate-foss/derapkbuilder/include -g -std=gnu90 -pedantic -pedantic-errors -Wall -Wextra -Werror -fsanitize=address -o CMakeFiles/derapkbuilder.dir/src/main.c.o -c /data/data/com.termux/files/home/projs/kilate-foss/derapkbuilder/src/main.c",
-  "file": "/data/data/com.termux/files/home/projs/kilate-foss/derapkbuilder/src/main.c",
-  "output": "/data/data/com.termux/files/home/projs/kilate-foss/derapkbuilder/.build/CMakeFiles/derapkbuilder.dir/src/main.c.o"
+  "directory": "/data/data/com.termux/files/home/projs/der-foss/derApkBuilder/.build",
+  "command": "/data/data/com.termux/files/usr/bin/cc -I/data/data/com.termux/files/home/projs/der-foss/derApkBuilder/include -g -std=gnu90 -pedantic -pedantic-errors -Wall -Wextra -Werror -fsanitize=address -o CMakeFiles/derapkbuilder.dir/src/main.c.o -c /data/data/com.termux/files/home/projs/der-foss/derApkBuilder/src/main.c",
+  "file": "/data/data/com.termux/files/home/projs/der-foss/derApkBuilder/src/main.c",
+  "output": "/data/data/com.termux/files/home/projs/der-foss/derApkBuilder/.build/CMakeFiles/derapkbuilder.dir/src/main.c.o"
 },
 {
-  "directory": "/data/data/com.termux/files/home/projs/kilate-foss/derapkbuilder/.build",
-  "command": "/data/data/com.termux/files/usr/bin/cc -I/data/data/com.termux/files/home/projs/kilate-foss/derapkbuilder/include -g -std=gnu90 -pedantic -pedantic-errors -Wall -Wextra -Werror -fsanitize=address -o CMakeFiles/derapkbuilder.dir/src/project.c.o -c /data/data/com.termux/files/home/projs/kilate-foss/derapkbuilder/src/project.c",
-  "file": "/data/data/com.termux/files/home/projs/kilate-foss/derapkbuilder/src/project.c",
-  "output": "/data/data/com.termux/files/home/projs/kilate-foss/derapkbuilder/.build/CMakeFiles/derapkbuilder.dir/src/project.c.o"
+  "directory": "/data/data/com.termux/files/home/projs/der-foss/derApkBuilder/.build",
+  "command": "/data/data/com.termux/files/usr/bin/cc -I/data/data/com.termux/files/home/projs/der-foss/derApkBuilder/include -g -std=gnu90 -pedantic -pedantic-errors -Wall -Wextra -Werror -fsanitize=address -o CMakeFiles/derapkbuilder.dir/src/project.c.o -c /data/data/com.termux/files/home/projs/der-foss/derApkBuilder/src/project.c",
+  "file": "/data/data/com.termux/files/home/projs/der-foss/derApkBuilder/src/project.c",
+  "output": "/data/data/com.termux/files/home/projs/der-foss/derApkBuilder/.build/CMakeFiles/derapkbuilder.dir/src/project.c.o"
 }
 ]
