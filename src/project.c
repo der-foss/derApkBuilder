@@ -4,10 +4,12 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 #include <unistd.h>
 #include <yaml.h>
 
+#include "file_list.h"
 #include "util.h"
 
 #define PROJECT_CONFIG_NAME "name"
@@ -293,12 +295,12 @@ int build_res(struct project_t *p)
                  "-I %s "
                  "--min-sdk-version %d "
                  "--target-sdk-version %d "
-                 "--java %s "
+                 "--java %s/java/generated/ "
                  "-R %s/res.zip "
                  "-o %s/unaligned.apk",
                  p->bins.aapt2, p->android_manifest_path, buf,
                  p->android_sdk_min_api_version, p->android_sdk_api_version,
-                 p->android_java_path, p->build_path, p->build_path);
+                 p->build_path, p->build_path, p->build_path);
 
         printf("-- Linking resources with %s\n", p->bins.aapt2);
         if (system(cmd) != 0) {
@@ -310,7 +312,63 @@ int build_res(struct project_t *p)
 
 int build_java(struct project_t *p)
 {
-        (void)p;
+        char cmd[4096] = {0};
+        char outdir[256] = {0};
+        char buf[256] = {0};
+        
+        size_t i = 0;
+        size_t len = 0;
+        
+        struct file_list_t java_files = {0};
+        
+        if (list_java_files(&java_files, p->android_java_path) != 0) {
+                puts("error: failed to list java files");
+                return -1;
+        }
+
+        makedir(p->build_path);
+
+        snprintf(outdir, sizeof outdir, "%s/java/classes/", p->build_path);
+        makedir(outdir);
+        
+        snprintf(buf, sizeof buf, "%s/platforms/android-%d/android.jar",
+                 p->android_sdk_path, p->android_sdk_api_version);
+        if (!fexists(buf)) {
+                printf("error: android.jar doesn't exists at %s\n", buf);
+                clean_file_list(&java_files);
+                return -1;
+        }
+
+        snprintf(cmd, sizeof cmd,
+                 "%s -source 17 "
+                 "-target 17 "
+                 "-nowarn "
+                 "-proc:none "
+                 "-classpath %s "
+                 "-d %s ",
+                 p->bins.javac, buf, outdir);
+        len = strlen(cmd);
+
+        for (i = 0; i < java_files.count; i++) {
+                size_t needed = strlen(java_files.data[i]) + 2;
+                if (len + needed >= sizeof cmd) {
+                        puts("error: command too long");
+                        clean_file_list(&java_files);
+                        return -1;
+                }
+
+                strcat(cmd, java_files.data[i]);
+                strcat(cmd, " ");
+        }
+        
+        printf("-- Compiling java files with %s\n", p->bins.javac);
+        if (system(cmd) != 0) {
+                puts("error: failed to run javac compile.");
+                clean_file_list(&java_files);
+                return -1;
+        }
+
+        clean_file_list(&java_files);
         return 0;
 }
 
