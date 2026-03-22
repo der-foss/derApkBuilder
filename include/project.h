@@ -6,12 +6,21 @@
 struct project_t {
         char *name;
         char *build_path;
-        char *android_sdk_path;
-        char *android_manifest_path;
-        char *android_res_path;
-        char *android_java_path;
-        int android_sdk_api_version;
-        int android_sdk_min_api_version;
+
+        struct {
+                char *sdk_path;
+                char *manifest_path;
+                char *res_path;
+                char *java_path;
+                char *keystore_path;
+
+                char *keystore_alias;
+                char *keystore_store_pass;
+                char *keystore_key_pass;
+
+                int sdk_api_version;
+                int sdk_min_api_version;
+        } android;
 
         struct {
                 char **data;
@@ -22,7 +31,11 @@ struct project_t {
         struct {
                 char *aapt2;
                 char *javac;
+                char *jar;
                 char *d8;
+                char *zip;
+                char *zipalign;
+                char *jarsigner;
         } bins;
 };
 
@@ -32,5 +45,6 @@ void destroy_project(struct project_t *);
 int build_res(struct project_t *);
 int build_java(struct project_t *);
 int build_dex(struct project_t *);
+int make_apk(struct project_t *);
 
 #endif

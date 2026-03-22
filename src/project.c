@@ -15,12 +15,19 @@
 #define PROJECT_CONFIG_NAME "name"
 #define PROJECT_CONFIG_DEPENDENCIES "dependencies"
 #define PROJECT_CONFIG_BUILD_PATH "build-path"
+
 #define PROJECT_CONFIG_A_SDK_PATH "android-sdk-path"
 #define PROJECT_CONFIG_A_SDK_API_VERSION "android-sdk-api-version"
 #define PROJECT_CONFIG_A_SDK_MIN_API_VERSION "android-sdk-min-api-version"
+
 #define PROJECT_CONFIG_A_MANIFEST_PATH "android-manifest-path"
 #define PROJECT_CONFIG_A_RES_PATH "android-res-path"
 #define PROJECT_CONFIG_A_JAVA_PATH "android-java-path"
+
+#define PROJECT_CONFIG_A_KEYSTORE_PATH "android-keystore-path"
+#define PROJECT_CONFIG_A_KEYSTORE_ALIAS "android-keystore-alias"
+#define PROJECT_CONFIG_A_KEYSTORE_STORE_PASS "android-keystore-store-pass"
+#define PROJECT_CONFIG_A_KEYSTORE_KEY_PASS "android-keystore-key-pass"
 
 static char *expand(const char *x, const char *y)
 {
@@ -113,31 +120,49 @@ int load_project(struct project_t *p, const char *path)
                                         p->build_path = expand(path, value);
                                 else if (strcmp(ckey,
                                                 PROJECT_CONFIG_A_SDK_PATH) == 0)
-                                        p->android_sdk_path = strdup(value);
+                                        p->android.sdk_path = strdup(value);
                                 else if (strcmp(ckey,
                                                 PROJECT_CONFIG_A_SDK_API_VERSION) ==
                                          0)
-                                        p->android_sdk_api_version =
+                                        p->android.sdk_api_version =
                                                 atoi(value);
                                 else if (strcmp(ckey,
                                                 PROJECT_CONFIG_A_SDK_MIN_API_VERSION) ==
                                          0)
-                                        p->android_sdk_min_api_version =
+                                        p->android.sdk_min_api_version =
                                                 atoi(value);
                                 else if (strcmp(ckey,
                                                 PROJECT_CONFIG_A_MANIFEST_PATH) ==
                                          0)
-                                        p->android_manifest_path =
+                                        p->android.manifest_path =
                                                 expand(path, value);
                                 else if (strcmp(ckey,
                                                 PROJECT_CONFIG_A_RES_PATH) == 0)
-                                        p->android_res_path =
+                                        p->android.res_path =
                                                 expand(path, value);
                                 else if (strcmp(ckey,
                                                 PROJECT_CONFIG_A_JAVA_PATH) ==
                                          0)
-                                        p->android_java_path =
+                                        p->android.java_path =
                                                 expand(path, value);
+                                else if (strcmp(ckey,
+                                                PROJECT_CONFIG_A_KEYSTORE_PATH) == 0)
+                                        p->android.keystore_path = expand(path, value);
+                                else if (strcmp(ckey,
+                                                PROJECT_CONFIG_A_KEYSTORE_ALIAS) ==
+                                         0)
+                                        p->android.keystore_alias =
+                                                strdup(value);
+                                else if (strcmp(ckey,
+                                                PROJECT_CONFIG_A_KEYSTORE_STORE_PASS) ==
+                                         0)
+                                        p->android.keystore_store_pass =
+                                                strdup(value);
+                                else if (strcmp(ckey,
+                                                PROJECT_CONFIG_A_KEYSTORE_KEY_PASS) ==
+                                         0)
+                                        p->android.keystore_key_pass =
+                                                strdup(value);
 
                                 ckey[0] = '\0';
 
@@ -175,7 +200,7 @@ int load_project(struct project_t *p, const char *path)
                 puts("-- no build-path provided. falling back to ./build");
         }
 
-        if (!p->android_sdk_path) {
+        if (!p->android.sdk_path) {
                 char *sdkpath = getenv("ANDROID_SDK");
                 if (!sdkpath)
                         sdkpath = getenv("ANDROID_HOME");
@@ -185,30 +210,30 @@ int load_project(struct project_t *p, const char *path)
                 }
                 printf("-- no android-sdk-path provided. falling back to %s\n",
                        sdkpath);
-                p->android_sdk_path = strdup(sdkpath);
+                p->android.sdk_path = strdup(sdkpath);
         }
 
-        if (p->android_sdk_api_version == 0) {
+        if (p->android.sdk_api_version == 0) {
                 puts("error: missing mandatory field in config: android-sdk-api-version");
                 return -1;
         }
 
-        if (p->android_sdk_min_api_version == 0) {
+        if (p->android.sdk_min_api_version == 0) {
                 puts("error: missing mandatory field in config: android-sdk-min-api-version");
                 return -1;
         }
 
-        if (!p->android_manifest_path) {
+        if (!p->android.manifest_path) {
                 puts("error: missing mandatory field in config: android-manifest-path");
                 return -1;
         }
 
-        if (!p->android_res_path) {
+        if (!p->android.res_path) {
                 puts("error: missing mandatory field in config: android-res-path");
                 return -1;
         }
 
-        if (!p->android_java_path) {
+        if (!p->android.java_path) {
                 puts("error: missing mandatory field in config: android-java-path");
                 return -1;
         }
@@ -245,6 +270,50 @@ int load_project(struct project_t *p, const char *path)
                        d8);
                 p->bins.d8 = d8;
         }
+
+        if (!p->bins.jar) {
+                char *jar = which("jar");
+                if (!jar) {
+                        puts("error: jar not found using which.");
+                        return -1;
+                }
+                printf("-- no android-jar-bin provided. falling back to %s\n",
+                       jar);
+                p->bins.jar = jar;
+        }
+
+        if (!p->bins.zip) {
+                char *zip = which("zip");
+                if (!zip) {
+                        puts("error: zip not found using which.");
+                        return -1;
+                }
+                printf("-- no android-zip-bin provided. falling back to %s\n",
+                       zip);
+                p->bins.zip = zip;
+        }
+
+        if (!p->bins.zipalign) {
+                char *zipalign = which("zipalign");
+                if (!zipalign) {
+                        puts("error: zipalign not found using which.");
+                        return -1;
+                }
+                printf("-- no android-zipalign-bin provided. falling back to %s\n",
+                       zipalign);
+                p->bins.zipalign = zipalign;
+        }
+
+        if (!p->bins.jarsigner) {
+                char *jarsigner = which("jarsigner");
+                if (!jarsigner) {
+                        puts("error: jarsigner not found using which.");
+                        return -1;
+                }
+                printf("-- no android-jarsigner-bin provided. falling back to %s\n",
+                       jarsigner);
+                p->bins.jarsigner = jarsigner;
+        }
         return 0;
 }
 
@@ -253,10 +322,10 @@ void destroy_project(struct project_t *p)
         size_t i;
         free(p->name);
         free(p->build_path);
-        free(p->android_sdk_path);
-        free(p->android_manifest_path);
-        free(p->android_res_path);
-        free(p->android_java_path);
+        free(p->android.sdk_path);
+        free(p->android.manifest_path);
+        free(p->android.res_path);
+        free(p->android.java_path);
         free(p->bins.javac);
         free(p->bins.aapt2);
         free(p->bins.d8);
@@ -266,15 +335,23 @@ void destroy_project(struct project_t *p)
         free(p->deps.data);
 }
 
+static void mkdirs(struct project_t *p)
+{
+        char buf[256];
+        makedir(p->build_path);
+        snprintf(buf, sizeof buf, "%s/generated", p->build_path);
+        makedir(buf);
+}
+
 int build_res(struct project_t *p)
 {
         char cmd[512] = { 0 };
         char buf[256] = { 0 };
 
-        makedir(p->build_path);
+        mkdirs(p);
 
-        snprintf(cmd, sizeof cmd, "%s compile --dir %s -o %s/res.zip",
-                 p->bins.aapt2, p->android_res_path, p->build_path);
+        snprintf(cmd, sizeof cmd, "%s compile --dir %s -o %s/generated/res.zip",
+                 p->bins.aapt2, p->android.res_path, p->build_path);
 
         printf("-- Compiling resources with %s\n", p->bins.aapt2);
         if (system(cmd) != 0) {
@@ -283,7 +360,7 @@ int build_res(struct project_t *p)
         }
 
         snprintf(buf, sizeof buf, "%s/platforms/android-%d/android.jar",
-                 p->android_sdk_path, p->android_sdk_api_version);
+                 p->android.sdk_path, p->android.sdk_api_version);
         if (!fexists(buf)) {
                 printf("error: android.jar doesn't exists at %s\n", buf);
                 return -1;
@@ -296,11 +373,11 @@ int build_res(struct project_t *p)
                  "-I %s "
                  "--min-sdk-version %d "
                  "--target-sdk-version %d "
-                 "--java %s/java/generated/ "
-                 "-R %s/res.zip "
+                 "--java %s/generated/java/ "
+                 "-R %s/generated/res.zip "
                  "-o %s/unaligned.apk",
-                 p->bins.aapt2, p->android_manifest_path, buf,
-                 p->android_sdk_min_api_version, p->android_sdk_api_version,
+                 p->bins.aapt2, p->android.manifest_path, buf,
+                 p->android.sdk_min_api_version, p->android.sdk_api_version,
                  p->build_path, p->build_path, p->build_path);
 
         printf("-- Linking resources with %s\n", p->bins.aapt2);
@@ -383,22 +460,22 @@ int build_java(struct project_t *p)
         size_t len = 0;
         struct java_files_t javafiles = { 0 };
 
-        makedir(p->build_path);
+        mkdirs(p);
 
-        snprintf(outdir, sizeof outdir, "%s/java/classes/", p->build_path);
+        snprintf(outdir, sizeof outdir, "%s/generated/java/", p->build_path);
         makedir(outdir);
 
         snprintf(androidjar, sizeof androidjar,
-                 "%s/platforms/android-%d/android.jar", p->android_sdk_path,
-                 p->android_sdk_api_version);
+                 "%s/platforms/android-%d/android.jar", p->android.sdk_path,
+                 p->android.sdk_api_version);
         if (!fexists(androidjar)) {
                 printf("error: android.jar doesn't exists at %s\n", buf);
                 return -1;
         }
 
         snprintf(buf, sizeof buf,
-                 "%s -source 17 "
-                 "-target 17 "
+                 "%s -source 8 "
+                 "-target 8 "
                  "-nowarn "
                  "-proc:none "
                  "-classpath %s "
@@ -407,9 +484,9 @@ int build_java(struct project_t *p)
 
         len = strlen(buf);
 
-        if (get_java_files(&javafiles, p->android_java_path) != 0) {
+        if (get_java_files(&javafiles, p->android.java_path) != 0) {
                 printf("error: can't get java files at %s\n",
-                       p->android_java_path);
+                       p->android.java_path);
                 return -1;
         }
 
@@ -432,11 +509,72 @@ int build_java(struct project_t *p)
         }
         free(javafiles.files);
         free(cmd);
+
+        snprintf(buf, sizeof buf,
+                 "jar cf %s/generated/java/classes.jar -C %s .", p->build_path,
+                 outdir);
+        if (system(buf) != 0) {
+                puts("error: failed to run jar cmd.");
+                return -1;
+        }
         return 0;
 }
 
 int build_dex(struct project_t *p)
 {
-        (void)p;
+        char cmd[256] = { 0 };
+
+        mkdirs(p);
+
+        snprintf(cmd, sizeof cmd,
+                 "d8 --min-api %d --output %s/generated %s/generated/java/classes.jar",
+                 p->android.sdk_min_api_version, p->build_path, p->build_path);
+        printf("-- Dexing %s/generated/java/classes.jar with %s\n",
+               p->build_path, p->bins.d8);
+        if (system(cmd) != 0) {
+                puts("error: failed to run d8.");
+                return -1;
+        }
+        return 0;
+}
+
+int make_apk(struct project_t *p)
+{
+        char cmd[512] = { 0 };
+
+        snprintf(cmd, sizeof cmd, "%s -j -ur %s/unaligned.apk %s/generated/classes.dex > /dev/null",
+                 p->bins.zip, p->build_path, p->build_path);
+        printf("-- Adding %s/generated/classes.dex into %s/unaligned.apk with %s\n", p->build_path, p->build_path, p->bins.zip);
+        if (system(cmd) != 0) {
+                puts("error: failed to add classes.dex into unaligned.apk with zip.");
+                return -1;
+        }
+
+        snprintf(cmd, sizeof cmd,
+                 "jarsigner "
+                 "-keystore %s "
+                 "-storepass %s "
+                 "-keypass %s "
+                 "-signedjar %s/signed-unaligned.apk "
+                 "%s/unaligned.apk "
+                 "%s > /dev/null",
+                 p->android.keystore_path, p->android.keystore_store_pass,
+                 p->android.keystore_key_pass, p->build_path,
+                 p->build_path, p->android.keystore_alias);
+
+        printf("-- Signing %s/unaligned.apk with %s\n", p->build_path, p->bins.jarsigner);
+        if (system(cmd) != 0) {
+                puts("error: failed to sign apk with jarsigner.");
+                return -1;
+        }
+
+        snprintf(cmd, sizeof cmd, "zipalign -f 4 %s/signed-unaligned.apk %s/signed.apk", p->build_path, p->build_path);
+        printf("-- Aligning %s/unaligned.apk with %s\n", p->build_path, p->bins.zipalign);
+        if (system(cmd) != 0) {
+                puts("error: failed to align apk with zipalign.");
+                return -1;
+        }
+
+        printf("-- Build Successfull!\n");
         return 0;
 }

@@ -18,6 +18,7 @@ static int run(const char *path)
         build_res(&pc);
         build_java(&pc);
         build_dex(&pc);
+        make_apk(&pc);
 
         destroy_project(&pc);
         return 0;

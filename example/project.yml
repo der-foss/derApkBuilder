@@ -1,11 +1,19 @@
 name: my-project
 build-path: .build
+
 #android-sdk-path: env(ANDROID_SDK)
 android-sdk-api-version: 29
 android-sdk-min-api-version: 24
+
 android-manifest-path: AndroidManifest.xml
 android-res-path: src/res
 android-java-path: src/java
+
+android-keystore-path: myproject.keystore
+android-keystore-alias: myproject
+android-keystore-store-pass: 87654321
+android-keystore-key-pass: 87654321
+
 dependencies:
   - androidx.constraintlayout:constraintlayout:2.2.0
   - md3.hehe:mrje:2.2.0
