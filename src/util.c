@@ -1,11 +1,59 @@
-#include <dirent.h>
-#include <malloc.h>
+#include "util.h"
 
-struct file_list_t {
-        char **data;
-        size_t count;
-        size_t capacity;
-};
+#include <malloc.h>
+#include <stdio.h>
+#include <string.h>
+
+#ifdef _WIN32
+#include <direct.h>
+#ifndef strdup
+#define strdup _strdup
+#endif
+#ifndef pmkdir
+#define pmkdir(s) _mkdir(s)
+#endif
+#else
+#include <unistd.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#ifndef pmkdir
+#define pmkdir(s) mkdir(s, 0700)
+#endif
+#endif
+
+bool fexists(const char *s)
+{
+        return access(s, F_OK) == 0;
+}
+
+char *which(const char *cmd)
+{
+        FILE *f;
+        char buf[256];
+        snprintf(buf, sizeof buf, "which %s", cmd);
+
+        f = popen(buf, "r");
+        if (!f) {
+                return NULL;
+        }
+
+        memset(buf, 0, sizeof buf);
+        if (fgets(buf, sizeof buf, f) != NULL) {
+                char *p = strdup(buf);
+                p[strcspn(p, "\n")] = 0;
+                return p;
+        }
+        return NULL;
+}
+
+bool makedir(const char *s)
+{
+        if (!fexists(s)) {
+                pmkdir(s);
+                return true;
+        }
+        return false;
+}
 
 int list_java_files(struct file_list_t *fl, const char *ph)
 {

@@ -9,7 +9,6 @@
 #include <unistd.h>
 #include <yaml.h>
 
-#include "file_list.h"
 #include "util.h"
 
 #define PROJECT_CONFIG_NAME "name"
