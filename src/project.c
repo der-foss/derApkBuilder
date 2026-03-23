@@ -409,13 +409,24 @@ void destroy_project(struct project_t *p)
         size_t i;
         free(p->name);
         free(p->build_path);
+
         free(p->android.sdk_path);
         free(p->android.manifest_path);
         free(p->android.res_path);
         free(p->android.java_path);
-        free(p->bins.javac);
+        free(p->android.keystore_path);
+        free(p->android.keystore_alias);
+        free(p->android.keystore_key_pass);
+        free(p->android.keystore_store_pass);
+
         free(p->bins.aapt2);
         free(p->bins.d8);
+        free(p->bins.javac);
+        free(p->bins.jar);
+        free(p->bins.jarsigner);
+        free(p->bins.zip);
+        free(p->bins.zipalign);
+
         for (i = 0; i < p->deps.count; ++i) {
                 free(p->deps.data[i]);
         }
