@@ -1,71 +1,21 @@
 # derApkBuilder
+- A Lightweight and Fast Android Package Builder CLI. 
 
-A Android Package Builder CLI
+# Documentation
+- See all docs at [Docs](https://github.com/der-foss/derApkBuilder/tree/main/docs)
 
----
+# Building from source
 
-## Features
+## Dependencies
 
-- [x] APK Compilation
-- [ ] AAB Support
-- [x] Java
-- [ ] Kotlin
-- [ ] R8 / ProGuard
-- [ ] ViewBinding
-- [ ] Jetpack Compose (not supported yet)
+- `CMake 3.22 or above` for building.
+- `gcc or clang` for building.
+- `yaml`
 
----
+## Build & Run
+- Well, to build it, you just need to run this command below:
 
-## Project Structure
-
-Your Android project must follow this structure:
-
-```text
-Project/
- ├── src/
- │    ├── java/          (Java source files)
- │    └── res/           (resources)
- │
- ├── AndroidManifest.xml
- ├── keystore.jks (to sign apk)
- └── project.yml (project config)
-```
-
----
-
-## Requirements (Linux 🐧)
-
-**• OpenJDK-17
-• AAPT2
-• D8
-• Android-SDK**
-
-
----
-
-## Building the CLI
-
-```
+```bash
 chmod +x make.sh
 ./make.sh
 ```
-
----
-
-## Building an APK
-
-```
-./derapkbuilder run <PROJECT_PATH>
-```
-
-**Example**
-
-```
-./derapkbuilder run example/
-```
-
----
-
-## Configuration
-
-All configurations are defined in project.yml (see example in the repository).
