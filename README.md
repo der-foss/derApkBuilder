@@ -29,7 +29,7 @@ Project/
  ├── AndroidManifest.xml
  ├── keystore.jks (to sign apk)
  └── project.yml (project config)
-
+```
 
 ---
 
