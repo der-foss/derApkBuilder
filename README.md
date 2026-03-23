@@ -33,35 +33,39 @@ Project/
 
 ---
 
-Requirements (Linux 🐧)
+## Requirements (Linux 🐧)
 
-• javac
-• aapt2
-• d8
-• Android SDK
+**• OpenJDK-17
+• AAPT2
+• D8
+• Android-SDK**
 
 
 ---
 
-Building the CLI
+## Building the CLI
 
+```
 chmod +x make.sh
 ./make.sh
-
+```
 
 ---
 
-Building an APK
+## Building an APK
 
+```
 ./derapkbuilder run <PROJECT_PATH>
+```
 
-Example
+**Example**
 
+```
 ./derapkbuilder run example/
-
+```
 
 ---
 
-Configuration
+## Configuration
 
 All configurations are defined in project.yml (see example in the repository).
