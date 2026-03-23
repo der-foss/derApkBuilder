@@ -8,14 +8,21 @@
 
 ## Dependencies
 
+- `ruby` for building
 - `CMake 3.22 or above` for building.
 - `gcc or clang` for building.
 - `yaml`
 
-## Build & Run
+## Build
 - Well, to build it, you just need to run this command below:
 
 ```bash
-chmod +x make.sh
-./make.sh
+ruby make.rb
+```
+
+## Build & Install
+- Well, to build and install, you just need to run this command below:
+
+```bash
+ruby make.rb --install
 ```
