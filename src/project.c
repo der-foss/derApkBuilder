@@ -270,19 +270,6 @@ int load_project(struct project_t *p, const char *path)
                 puts("-- no build-path provided. falling back to ./build");
         }
 
-        if (!p->android.sdk_path) {
-                char *sdkpath = getenv("ANDROID_SDK");
-                if (!sdkpath)
-                        sdkpath = getenv("ANDROID_HOME");
-                if (!sdkpath) {
-                        puts("error: env(ANDROID_SDK) nor env(ANDROID_HOME) are defined.");
-                        return -1;
-                }
-                printf("-- no android:sdk-path provided. falling back to %s\n",
-                       sdkpath);
-                p->android.sdk_path = strdup(sdkpath);
-        }
-
         if (p->android.sdk_api_version == 0) {
                 puts("error: missing mandatory field in config: android:sdk-api-version");
                 return -1;
@@ -306,6 +293,39 @@ int load_project(struct project_t *p, const char *path)
         if (!p->android.java_path) {
                 puts("error: missing mandatory field in config: android:java-path");
                 return -1;
+        }
+
+        if (!p->android.keystore_path) {
+                puts("error: missing mandatory field in config: android:keystore-path");
+                return -1;
+        }
+
+        if (!p->android.keystore_alias) {
+                puts("error: missing mandatory field in config: android:keystore-alias");
+                return -1;
+        }
+
+        if (!p->android.keystore_key_pass) {
+                puts("error: missing mandatory field in config: android:keystore-key-pass");
+                return -1;
+        }
+
+        if (!p->android.keystore_store_pass) {
+                puts("error: missing mandatory field in config: android:keystore-store-pass");
+                return -1;
+        }
+
+        if (!p->android.sdk_path) {
+                char *sdkpath = getenv("ANDROID_SDK");
+                if (!sdkpath)
+                        sdkpath = getenv("ANDROID_HOME");
+                if (!sdkpath) {
+                        puts("error: env(ANDROID_SDK) nor env(ANDROID_HOME) are defined.");
+                        return -1;
+                }
+                printf("-- no android:sdk-path provided. falling back to %s\n",
+                       sdkpath);
+                p->android.sdk_path = strdup(sdkpath);
         }
 
         if (!p->bins.aapt2) {
